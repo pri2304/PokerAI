@@ -34,14 +34,3 @@ class PokerGame:
             print(player)
         print("Community Cards", ', '.join(str(card) for card in self.community_cards))
         print("---------------------\n")
-
-game = PokerGame(["Pri", "Bot", "CPU1"])
-game.deal_initial_hands()
-game.show_table()
-game.deal_flop()
-game.show_table()
-game.deal_turn()
-game.show_table()
-game.deal_river()
-game.show_table()
-
