@@ -7,6 +7,8 @@ class PokerGame:
         self.deck = Deck()
         self.deck.shuffle()
         self.community_cards = []
+        self.dealer = 0
+        self.pot = 0
 
     def deal_initial_hands(self):
         """Deal 2 hole cards to each player."""
@@ -34,3 +36,40 @@ class PokerGame:
             print(player)
         print("Community Cards", ', '.join(str(card) for card in self.community_cards))
         print("---------------------\n")
+
+    def post_blinds(self, small_blind, big_blind):
+        num_players = len(self.players)
+        self.small_blind_pos = (self.dealer + 1) % num_players
+        self.big_blind_pos = (self.dealer + 2) % num_players
+
+        sb_player = self.players[self.small_blind_pos]
+        bb_player = self.players[self.big_blind_pos]
+
+        sb_amount = sb_player.bet(small_blind)
+        bb_amount = bb_player.bet(big_blind)
+
+        self.pot = big_blind + small_blind
+
+        print(f"{sb_player.name} posts Small Blind: {small_blind}")
+        print(f"{bb_player.name} posts Big Blind: {big_blind}")
+        print(f"Pot is now {self.pot}")
+
+    def start_new_hand(self):
+        self.dealer = (self.dealer + 1) % len(self.players)
+
+        self.pot = 0
+        self.community_cards = []
+
+        self.deck = Deck()
+        self.deck.shuffle()
+
+        for player in self.players:
+            player.hole_cards = []
+            player.current_bet = 0
+            player.folded = False
+
+    def start_round(self, small_blind, big_blind):
+        self.start_new_hand()
+        self.post_blinds(small_blind, big_blind)
+
+
