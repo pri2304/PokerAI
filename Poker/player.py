@@ -21,6 +21,7 @@ class Player:
         self.folded = False
 
     def bet(self, amount):
+        """helps calculate the bet amount and remaining chips amount"""
         if amount >= self.chips:
             amount = self.chips
             self.chips = 0
@@ -32,6 +33,7 @@ class Player:
 
 
     def call(self, highest_bet):
+        """Calculates Call amount and chips after calling"""
         amount_to_call = highest_bet - self.current_bet
 
         if amount_to_call >= self.chips:
@@ -44,6 +46,7 @@ class Player:
         return amount_to_call
 
     def check(self, highest_bet):
+        """Checks if /"check"/ condition is possible"""
         if highest_bet == 0:
             return True
         else:
