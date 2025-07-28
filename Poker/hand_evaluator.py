@@ -93,7 +93,7 @@ def check_full_house(rank_counts):
     triples = [rank for rank, count in rank_counts.items() if count >= 3]
     pairs = [rank for rank, count in rank_counts.items() if count >= 2]
 
-    if not triples and len(pairs) < 2 and triples[0] not in pairs:
+    if not triples:
         return None
 
     triples.sort(reverse=True)
@@ -239,3 +239,31 @@ def format_hand_result(rank_value, tiebreakers):
 
     return None
 
+def test_hand_evaluator():
+    from deck import Deck
+    from player import Player
+
+    # Setup a test deck and players
+    deck = Deck()
+    deck.shuffle()
+
+    players = [Player("Pri"), Player("Bot1"), Player("Bot2")]
+    community_cards = deck.deal(5)
+
+    # Deal 2 cards to each player
+    for p in players:
+        p.receive_cards(deck.deal(2))
+
+    print("--- Community Cards ---")
+    print(", ".join(str(card) for card in community_cards))
+    print()
+
+    # Evaluate each player
+    for p in players:
+        all_cards = p.hole_cards + community_cards
+        rank_value, tiebreakers = evaluate_hand(all_cards)
+        result = format_hand_result(rank_value, tiebreakers)
+
+        print(f"{p.name}: {', '.join(str(c) for c in p.hole_cards)} -> {result}")
+
+test_hand_evaluator()
