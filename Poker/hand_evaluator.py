@@ -1,5 +1,3 @@
-from deck import Card
-
 def evaluate_hand(cards):
     """
     Evaluate the best 5-card poker hand from 7 cards.
@@ -13,31 +11,47 @@ def evaluate_hand(cards):
 
     # Step 2: Check each hand type in order (highest first)
     result = check_straight_flush(cards, suit_counts)
-    if result: return (8, result)
+    if result:
+        tiebreakers, hand_cards = result
+        return (8, tiebreakers, hand_cards)
 
     result = check_four_of_a_kind(rank_counts, cards)
-    if result: return (7, result)
+    if result:
+        tiebreakers, hand_cards = result
+        return (7, tiebreakers, hand_cards)
 
-    result = check_full_house(rank_counts)
-    if result: return (6, result)
+    result = check_full_house(rank_counts, cards)
+    if result:
+        tiebreakers, hand_cards = result
+        return (6, tiebreakers, hand_cards)
 
-    result = check_flush(suit_counts)
-    if result: return (5, result)
+    result = check_flush(suit_counts, cards)
+    if result:
+        tiebreakers, hand_cards = result
+        return (5, tiebreakers, hand_cards)
 
     result = check_straight(cards)
-    if result: return (4, result)
+    if result:
+        tiebreakers, hand_cards = result
+        return (4, tiebreakers, hand_cards)
 
     result = check_three_of_a_kind(rank_counts, cards)
-    if result: return (3, result)
+    if result:
+        tiebreakers, hand_cards = result
+        return (3, tiebreakers, hand_cards)
 
     result = check_two_pair(rank_counts, cards)
-    if result: return (2, result)
+    if result:
+        tiebreakers, hand_cards = result
+        return (2, tiebreakers, hand_cards)
 
     result = check_one_pair(rank_counts, cards)
-    if result: return (1, result)
+    if result:
+        tiebreakers, hand_cards = result
+        return (1, tiebreakers, hand_cards)
 
-    # High card fallback
-    return (0, get_high_cards(cards))
+    top5 = sorted(cards, key=lambda c: c.value, reverse=True)[:5]
+    return (0, [c.value for c in top5], top5)
 
 def get_rank_counts(cards):
     """Return a dict: {rank_value: count} for all cards."""
@@ -55,147 +69,194 @@ def get_suit_counts(cards):
 
 def check_straight_flush(cards, suit_counts):
     """Return top 5 ranks for a straight flush, or None."""
-    for suit, ranks in suit_counts.items():
-        if len(ranks) < 5:
+    for suit in suit_counts:
+        suited = [c for c in cards if c.suit == suit]
+        if len(suited) < 5:
             continue
 
-        ranks = sorted(set(ranks), reverse=True)
+        suited.sort(key=lambda c: c.value, reverse=True)
 
-        if 14 in ranks:
-            ranks.append(1)
+        uniq = sorted({c.value for c in suited}, reverse = True)
+        if 14 in uniq:
+            uniq.append(1)
 
-        for i in range(len(ranks) - 4):
-            window = ranks[i:i + 5]
-
-            if max(window) - min(window) == 4 and len(set(window))==5:
-                return sorted(window, reverse=True)
+        for i in range(len(uniq) -4):
+            run = uniq[i:i+5]
+            if run[0] - run[4] == 4 and len(set(run)) == 5:
+                needed = set(run)
+                hand = []
+                for c in suited:
+                    if c.value in needed:
+                        hand.append(c)
+                        needed.remove(c.value)
+                    if len(hand) == 5:
+                        break
+                return ([run[0]], hand)
 
     return None
 
 def check_four_of_a_kind(rank_counts, cards):
     """Return [quad_rank, kicker] or None."""
-    quad_rank = None
-    for rank, count in rank_counts.items():
-        if count == 4:
-            quad_rank = rank
-            break
+    quad_rank = next((r for r, c in rank_counts.items() if c == 4), None)
+    if quad_rank is None:
+        return None
 
-        if not quad_rank:
-            return None
+    quad_cards = [c for c in cards if c.value == quad_rank]
 
-    kicker_ranks = [card.value for card in cards if card.value != quad_rank]
-    kicker = max(kicker_ranks) if kicker_ranks else None
+    kicker_card = max((c for c in cards if c.value != quad_rank), key=lambda c: c.value)
 
-    return [quad_rank, kicker]
+    hand_cards = quad_cards + [kicker_card]
+    tiebreakers = [quad_rank, kicker_card.value]
 
-def check_full_house(rank_counts):
+    return (tiebreakers, hand_cards)
+
+def check_full_house(rank_counts, cards):
     """Return [triple_rank, pair_rank] or None."""
-    triples = [rank for rank, count in rank_counts.items() if count >= 3]
-    pairs = [rank for rank, count in rank_counts.items() if count >= 2]
-
+    triples = sorted([r for r, c in rank_counts.items() if c >= 3], reverse=True)
     if not triples:
         return None
 
-    triples.sort(reverse=True)
-    pairs.sort(reverse=True)
-
     triple_rank = triples[0]
 
-    pair_rank = None
-    for rank in pairs:
-        if rank != triple_rank:
-            pair_rank = rank
-            break
+    pair_candidates = sorted([r for r, c in rank_counts.items if c >= 2 and r != triple_rank], reverse=True)
 
-    if not pair_rank and len(triples) >1:
+    if pair_candidates:
+        pair_rank = pair_candidates[0]
+
+    elif len(triples)>=2:
         pair_rank = triples[1]
 
-    if triple_rank and pair_rank:
-        return [triple_rank, pair_rank]
+    else:
+        return None
 
-    return None
+    triple_cards = [c for c in cards if c.value == triple_rank][:3]
+    pair_cards = [c for c in cards if c.value == pair_rank][:2]
 
+    hand_cards = triple_cards + pair_cards
+    tiebreakers = [triple_rank, pair_rank]
 
-def check_flush(suit_counts):
+    return (tiebreakers, hand_cards)
+
+def check_flush(suit_counts, cards):
     """Return top 5 ranks of flush, or None."""
+    best_tiebreak = None
+    best_cards = None
 
-    best_flush = None
+    for suit in suit_counts:
+        suited_cards = [c for c in cards if c.suit == suit]
+        if len(suited_cards) < 5:
+            continue
 
-    for suit, ranks in suit_counts.items():
-        if len(ranks) >= 5:
+        suited_cards.sort(key=lambda c: c.value, reverse=True)
+        top5_cards = suited_cards[:5]
+        top5_ranks = [c.value for c in top5_cards]
 
-            top5 = sorted(ranks, reverse=True)[:5]
+        if (best_tiebreak is None) or (top5_ranks > best_tiebreak):
+            best_tiebreak = top5_ranks
+            best_cards = top5_cards
 
-            if not best_flush or top5 > best_flush:
-                best_flush = top5
-
-    return best_flush
+    if best_tiebreak:
+        return (best_tiebreak, best_cards)
+    return None
 
 def check_straight(cards):
     """Return top 5 ranks of straight, or None (Ace high or low)."""
-    ranks = sorted({card.value for card in cards}, reverse=True)
+    ranks = sorted({c.value for c in cards}, reverse=True)
 
     if 14 in ranks:
         ranks.append(1)
 
     for i in range(len(ranks) - 4):
-        window = ranks[i:i + 5]
+        run = ranks[i:i + 5]
 
-        if max(window) - min(window) == 4 and len(set(window))==5:
-            return sorted(window, reverse=True)
+        if max(run) - min(run) == 4 and len(set(run))==5:
+            needed = set(run)
+
+            def matches(card):
+                return (card.value in needed) or (card.value == 14 and 1 in needed)
+
+            hand_cards = []
+            for c in sorted(cards, key=lambda c: c.value, reverse=True):
+                if matches(c):
+                    if c.value == 14 and 1 in needed:
+                        needed.remove(1)
+                    else:
+                        needed.remove(c.value)
+                    hand_cards.append(c)
+                if len(hand_cards) == 5:
+                    break
+
+            return ([run[0]], hand_cards)
 
     return None
 
 def check_three_of_a_kind(rank_counts, cards):
     """Return [triple_rank, kicker1, kicker2] or None."""
-    triples = [rank for rank, count in rank_counts.items() if count == 3]
+    triple_rank = next((r for r, c in sorted(rank_counts.items(), reverse=True) if c == 3), None)
 
-    if not triples:
+    if triple_rank is None:
         return None
 
-    triples.sort(reverse=True)
-    triple_rank = triples[0]
+    triple_cards = [c for c in cards if c.value == triple_rank][:3]
 
-    kickers = [card.value for card in cards if card.value != triple_rank]
-    kickers = sorted(set(kickers), reverse=True)[:2]
+    kicker_candidates = sorted((c for c in cards if c.value != triple_rank), key=lambda c: c.value, reverse=True)
 
-    return [triple_rank] + kickers
+    kicker_cards = []
+    seen_ranks = set()
+    for c in kicker_candidates:
+        if c.value not in seen_ranks:
+            kicker_cards.append(c)
+            seen_ranks.add(c.value)
+        if len(kicker_cards) == 2:
+            break
 
+    hand_cards = triple_cards + kicker_cards
+    tiebreakers = [triple_rank] + [c.value for c in kicker_cards]
+
+    return (tiebreakers, hand_cards)
 
 def check_two_pair(rank_counts, cards):
     """Return [high_pair, low_pair, kicker] or None."""
-    pairs = [rank for rank, count in rank_counts.items() if count >= 2]
-
-    if len(pairs) < 2:
+    pair_ranks = [r for r, c in rank_counts.items() if c >= 2]
+    if len(pair_ranks) < 2:
         return None
 
-    pairs.sort(reverse=True)
-    high_pair, low_pair = pairs[:2]
+    pair_ranks.sort(reverse=True)
+    high_pair, low_pair = pair_ranks[:2]
 
-    kickers = [card.value for card in cards if card.value not in (high_pair, low_pair)]
-    kicker = max(kickers) if kickers else None
+    kicker_card = max((c for c in cards if c.value not in (high_pair, low_pair)), key=lambda c: c.value)
 
-    return [high_pair, low_pair, kicker]
+    high_pair_cards = [c for c in cards if c.value == high_pair][:2]
+    low_pair_cards = [c for c in cards if c.value == low_pair][:2]
+
+    hand_cards = high_pair_cards + low_pair_cards +[kicker_card]
+    tiebreaker = [high_pair, low_pair, kicker_card.value]
+
+    return(tiebreaker, hand_cards)
 
 def check_one_pair(rank_counts, cards):
     """Return [pair_rank, kicker1, kicker2, kicker3] or None."""
-    pairs = [rank for rank, count in rank_counts.items() if count >= 2]
-
-    if not pairs:
+    pair_rank = next((r for r, c in sorted(rank_counts.items(), reverse=True) if c >= 2), None)
+    if pair_rank is None:
         return None
 
-    pairs.sort(reverse=True)
-    pair_rank=pairs[0]
+    pair_cards = [c for c in cards if c.value == pair_rank][:2]
 
-    kickers = [card.value for card in cards if card.value != pair_rank]
-    kickers = sorted(set(kickers), reverse=True)[:3]
+    kicker_candidates = sorted((c for c in cards if c.value != pair_rank), key=lambda c: c.value, reverse=True)
 
-    return [pair_rank] + kickers
+    kicker_cards = []
+    seen_ranks = set()
+    for c in kicker_candidates:
+        if c.value not in seen_ranks:
+            kicker_cards.append(c)
+            seen_ranks.add(c.value)
+        if len(kicker_cards) == 3:
+            break
 
-def get_high_cards(cards):
-    """Return top 5 ranks (for High Card case or Kickers)."""
-    ranks = sorted({card.value for card in cards}, reverse=True)
-    return ranks[:5]
+    hand_cards = pair_cards + kicker_cards
+    tiebreaker = [pair_rank] + [c.value for c in kicker_cards]
+
+    return (tiebreaker, hand_cards)
 
 def format_hand_result(rank_value, tiebreakers):
     """Turn a hand evaluation result into a readable string."""

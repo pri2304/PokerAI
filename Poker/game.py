@@ -1,5 +1,6 @@
 from deck import Deck
 from player import Player
+from hand_evaluator import format_hand_result
 
 class PokerGame:
     def __init__(self, player_names, starting_chips=1000):
@@ -89,6 +90,7 @@ class PokerGame:
             player.hole_cards = []
             player.current_bet = 0
             player.folded = False
+            player.best_hand = None
 
     def start_round(self, small_blind, big_blind):
         """resets hand + rotates the blinds"""
@@ -138,4 +140,29 @@ class PokerGame:
             p.current_bet = 0
 
         print(f"--- End of Betting Round. Pot is now {self.pot} ---\n")
+
+    def showdown(self):
+
+        for p in self.players:
+            if not p.folded:
+                p.evaluate_best_hand(self.community_cards)
+
+        ranked = sorted([p for p in self.players if not p.folded], key=lambda pl: (pl.best_hand[0], pl.best_hand[1]), reverse=True)
+
+        top_rank, top_tie = ranked[0].best_hand[:2]
+        winners = [pl for pl in ranked if (pl.best_hand[0], pl.best_hand[1]) == (top_rank, top_tie)]
+
+        print("\n--- SHOWDOWN ---")
+        for pl in ranked:
+            mark = "🏆" if pl in winners else " "
+            print(f"{mark} {pl.name:7}: {pl.pretty_hand()}")
+
+        share = self.pot // len(winners)
+        for w in winners:
+            w.chips += share
+        print(f"\nWinners: {', '.join(w.name for w in winners)} "
+              f"collect {share} chips each\n")
+
+        self.pot = 0
+
 

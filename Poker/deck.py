@@ -54,3 +54,6 @@ class Deck:
         self.cards = self.cards[num:]
         return dealt
 
+    def __repr__(self):
+        return self.__str__()
+
