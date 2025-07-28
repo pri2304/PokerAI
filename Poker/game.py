@@ -31,11 +31,31 @@ class PokerGame:
         self.community_cards.extend(self.deck.deal(1))
 
     def show_table(self):
-        print("\n---Current Table---")
-        for player in self.players:
-            print(player)
-        print("Community Cards", ', '.join(str(card) for card in self.community_cards))
-        print("---------------------\n")
+        print("\n--- Current Table ---")
+        print(f"Pot: {self.pot}\n")
+
+        # For quick reference
+        dealer_pos = self.dealer
+        sb_pos = getattr(self, "small_blind_pos", None)
+        bb_pos = getattr(self, "big_blind_pos", None)
+
+        for idx, player in enumerate(self.players):
+            status = "FOLDED" if player.folded else "ACTIVE"
+            role = []
+            if idx == dealer_pos:
+                role.append("D")
+            if idx == sb_pos:
+                role.append("SB")
+            if idx == bb_pos:
+                role.append("BB")
+            role_str = ",".join(role) if role else "-"
+
+            cards = ', '.join(str(card) for card in player.hole_cards) if player.hole_cards else "(no cards)"
+            print(f"{player.name:6} | {status:6} | Chips: {player.chips:4} | Role: {role_str:4} | Cards: {cards}")
+
+        community = ', '.join(str(card) for card in self.community_cards) if self.community_cards else "(none)"
+        print(f"\nCommunity Cards: {community}")
+        print("---------------------------\n")
 
     def post_blinds(self, small_blind, big_blind):
         """adds the big blind and small blind from respective players to the pot"""
@@ -75,4 +95,47 @@ class PokerGame:
         self.start_new_hand()
         self.post_blinds(small_blind, big_blind)
 
+    def betting_round(self, starting_player_index):
+        num_player = len(self.players)
+        current_bet = max(p.current_bet for p in self.players)
+        active_players = [p for p in self.players if not p.folded or p.chips > 0]
+
+        player_index = starting_player_index
+        acted_players = set()
+
+        while True:
+            player = self.players[player_index]
+
+            if player.folded or player.chips == 0:
+                player_index = (player_index + 1) % num_player
+                continue
+
+            acted_players.add(player)
+
+            if current_bet == 0:
+                player.check(current_bet)
+                print(f"{player.name} checks. (Chips Left: {player.chips})")
+
+            else:
+                if player.chips + player.current_bet >= current_bet:
+                    amount = player.call(current_bet)
+                    self.pot += amount
+                    print(f"{player.name} calls to {current_bet}, added {amount}. Pot: {self.pot}")
+
+                else:
+                    player.fold()
+                    print(f"{player.name} folded")
+
+            remaining = [p for p in active_players if not p.folded]
+            all_matched = all(p.folded or p.current_bet == current_bet for p in active_players)
+
+            if (all_matched and acted_players.issuperset(remaining)) or len(remaining) == 1:
+                break
+
+            player_index = (player_index + 1) % num_player
+
+        for p in self.players:
+            p.current_bet = 0
+
+        print(f"--- End of Betting Round. Pot is now {self.pot} ---\n")
 
