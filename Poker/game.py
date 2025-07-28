@@ -38,6 +38,7 @@ class PokerGame:
         print("---------------------\n")
 
     def post_blinds(self, small_blind, big_blind):
+        """adds the big blind and small blind from respective players to the pot"""
         num_players = len(self.players)
         self.small_blind_pos = (self.dealer + 1) % num_players
         self.big_blind_pos = (self.dealer + 2) % num_players
@@ -55,6 +56,7 @@ class PokerGame:
         print(f"Pot is now {self.pot}")
 
     def start_new_hand(self):
+        """resets everything for a new round"""
         self.dealer = (self.dealer + 1) % len(self.players)
 
         self.pot = 0
@@ -69,6 +71,7 @@ class PokerGame:
             player.folded = False
 
     def start_round(self, small_blind, big_blind):
+        """resets hand + rotates the blinds"""
         self.start_new_hand()
         self.post_blinds(small_blind, big_blind)
 
