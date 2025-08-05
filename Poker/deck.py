@@ -18,6 +18,7 @@ class Card:
         'A': 14
         }
     def __init__(self, rank, suit):
+        """Initializes suit, rank and value attributes of object"""
         self.suit = suit
         self.rank = rank
         self.value = self.Rank_Values[rank] #actual numeric value of card
@@ -32,6 +33,7 @@ class Card:
 
 class Deck:
     def __init__(self):
+        """Initializes a deck's cards as a list"""
         self.cards = []
         self.build_deck() #calls build_deck
 
