@@ -3,6 +3,7 @@ from hand_evaluator import evaluate_hand, format_hand_result
 
 class Player:
     def __init__(self, name, chips=1000):
+        """Initializes name, chips, hole cards, folded state, current bet state and best hand attributes"""
         self.name = name
         self.chips = chips
         self.hole_cards = []
@@ -28,7 +29,7 @@ class Player:
 
     def bet(self, amount):
         """helps calculate the bet amount and remaining chips amount"""
-        if amount >= self.chips:
+        if amount >= self.chips: #all in condition
             amount = self.chips
             self.chips = 0
         else:
@@ -42,7 +43,7 @@ class Player:
         """Calculates Call amount and chips after calling"""
         amount_to_call = highest_bet - self.current_bet
 
-        if amount_to_call >= self.chips:
+        if amount_to_call >= self.chips: #all in condition
             amount_to_call = self.chips
             self.chips = 0
         else:
@@ -63,9 +64,11 @@ class Player:
         return f"{self.name}: {cards_str} (Chips : {self.chips})"
 
     def evaluate_best_hand(self, board_cards):
+        """Evaluates player's best hand"""
         self.best_hand = evaluate_hand(self.hole_cards + board_cards)
 
     def pretty_hand(self):
+        """for better printing"""
         rv, tie, five = self.best_hand
         five_str = ' '.join(str(c) for c in five)
         return f"{format_hand_result(rv, tie):45} | {five_str}"
