@@ -103,7 +103,7 @@ class PokerGame:
         """maintains the betting loop for the round"""
         num_player = len(self.players)
         current_bet = max(p.current_bet for p in self.players)
-        active_players = [p for p in self.players if not p.folded or p.chips > 0]
+        active_players = [p for p in self.players if not p.folded and p.chips > 0]
 
         player_index = starting_player_index
         acted_players = set() #players who already took an action
