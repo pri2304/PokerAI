@@ -119,7 +119,7 @@ def check_full_house(rank_counts, cards):
 
     triple_rank = triples[0]
 
-    pair_candidates = sorted([r for r, c in rank_counts.items if c >= 2 and r != triple_rank], reverse=True) #checks for pair
+    pair_candidates = sorted([r for r, c in rank_counts.items() if c >= 2 and r != triple_rank], reverse=True) #checks for pair
 
     if pair_candidates: #select best pair
         pair_rank = pair_candidates[0]
