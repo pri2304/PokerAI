@@ -43,7 +43,7 @@ class Deck:
         self.cards = [Card(rank, suit) for rank in ranks for suit in suits] #builds a deck with all 52 cards
 
     def __str__(self):
-        return ', '.join(str(Card) for Card in self.cards) #to print deck
+        return ', '.join(str(card) for card in self.cards) #to print deck
 
     def shuffle(self):
         random.shuffle(self.cards) #shuffle's cards
