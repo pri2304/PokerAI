@@ -4,6 +4,7 @@ from hand_evaluator import format_hand_result
 
 class PokerGame:
     def __init__(self, player_names, starting_chips=1000):
+        """Initializes list of players, deck which is shuffled, community cards list as empty, dealer position as 0, pot as 0"""
         self.players = [Player(name, starting_chips) for name in player_names]
         self.deck = Deck()
         self.deck.shuffle()
@@ -32,15 +33,15 @@ class PokerGame:
         self.community_cards.extend(self.deck.deal(1))
 
     def show_table(self):
+        """Creates a readable log for rounds"""
         print("\n--- Current Table ---")
         print(f"Pot: {self.pot}\n")
 
-        # For quick reference
-        dealer_pos = self.dealer
-        sb_pos = getattr(self, "small_blind_pos", None)
-        bb_pos = getattr(self, "big_blind_pos", None)
+        dealer_pos = self.dealer #gets position for dealer
+        sb_pos = getattr(self, "small_blind_pos", None) #gets position for small blind player
+        bb_pos = getattr(self, "big_blind_pos", None) #gets position for big blind player
 
-        for idx, player in enumerate(self.players):
+        for idx, player in enumerate(self.players): #used to track not only player but position in table as well
             status = "FOLDED" if player.folded else "ACTIVE"
             role = []
             if idx == dealer_pos:
@@ -63,6 +64,7 @@ class PokerGame:
         num_players = len(self.players)
         self.small_blind_pos = (self.dealer + 1) % num_players
         self.big_blind_pos = (self.dealer + 2) % num_players
+        """tracks sb and bb positions"""
 
         sb_player = self.players[self.small_blind_pos]
         bb_player = self.players[self.big_blind_pos]
@@ -70,7 +72,7 @@ class PokerGame:
         sb_amount = sb_player.bet(small_blind)
         bb_amount = bb_player.bet(big_blind)
 
-        self.pot = big_blind + small_blind
+        self.pot = big_blind + small_blind #adds the big blind and small blind to pot
 
         print(f"{sb_player.name} posts Small Blind: {small_blind}")
         print(f"{bb_player.name} posts Big Blind: {big_blind}")
@@ -93,71 +95,73 @@ class PokerGame:
             player.best_hand = None
 
     def start_round(self, small_blind, big_blind):
-        """resets hand + rotates the blinds"""
+        """resets hand + rotates the blinds + posts blinds for new round"""
         self.start_new_hand()
         self.post_blinds(small_blind, big_blind)
 
     def betting_round(self, starting_player_index):
+        """maintains the betting loop for the round"""
         num_player = len(self.players)
         current_bet = max(p.current_bet for p in self.players)
         active_players = [p for p in self.players if not p.folded or p.chips > 0]
 
         player_index = starting_player_index
-        acted_players = set()
+        acted_players = set() #players who already took an action
 
-        while True:
+        while True: #betting loop
             player = self.players[player_index]
 
             if player.folded or player.chips == 0:
                 player_index = (player_index + 1) % num_player
-                continue
+                continue #goes to next player
 
             acted_players.add(player)
 
-            if current_bet == 0:
+            if current_bet == 0: #checks
                 player.check(current_bet)
                 print(f"{player.name} checks. (Chips Left: {player.chips})")
 
             else:
-                if player.chips + player.current_bet >= current_bet:
+                if player.chips + player.current_bet >= current_bet: #calls
                     amount = player.call(current_bet)
                     self.pot += amount
                     print(f"{player.name} calls to {current_bet}, added {amount}. Pot: {self.pot}")
 
-                else:
+                else: #folds
                     player.fold()
                     print(f"{player.name} folded")
 
             remaining = [p for p in active_players if not p.folded]
-            all_matched = all(p.folded or p.current_bet == current_bet for p in active_players)
+            all_matched = all(p.folded or p.current_bet == current_bet for p in active_players) #checks if all active players have matched
 
-            if (all_matched and acted_players.issuperset(remaining)) or len(remaining) == 1:
+            if (all_matched and acted_players.issuperset(remaining)) or len(remaining) == 1: #condition to check if round is over
                 break
 
             player_index = (player_index + 1) % num_player
 
-        for p in self.players:
+        for p in self.players: #resets current bet for all players for next round
             p.current_bet = 0
 
         print(f"--- End of Betting Round. Pot is now {self.pot} ---\n")
 
     def showdown(self):
+        """checks who won, then declares result"""
 
         for p in self.players:
             if not p.folded:
-                p.evaluate_best_hand(self.community_cards)
+                p.evaluate_best_hand(self.community_cards) #checks best hand for each player
 
-        ranked = sorted([p for p in self.players if not p.folded], key=lambda pl: (pl.best_hand[0], pl.best_hand[1]), reverse=True)
+        ranked = sorted([p for p in self.players if not p.folded], key=lambda pl: (pl.best_hand[0], pl.best_hand[1]), reverse=True) #ranks all player's best hands in order to determine winner
 
-        top_rank, top_tie = ranked[0].best_hand[:2]
-        winners = [pl for pl in ranked if (pl.best_hand[0], pl.best_hand[1]) == (top_rank, top_tie)]
+        top_rank, top_tie = ranked[0].best_hand[:2] #winner's rank and tiebreaker
+        winners = [pl for pl in ranked if (pl.best_hand[0], pl.best_hand[1]) == (top_rank, top_tie)] #checks for all winners and adds them to list
 
         print("\n--- SHOWDOWN ---")
         for pl in ranked:
-            mark = "🏆" if pl in winners else " "
+            mark = "🏆" if pl in winners else " " #prints all winner names
             print(f"{mark} {pl.name:7}: {pl.pretty_hand()}")
 
-        share = self.pot // len(winners)
+        share = self.pot // len(winners) #splits pot between winners
         for w in winners:
             w.chips += share
         print(f"\nWinners: {', '.join(w.name for w in winners)} "
