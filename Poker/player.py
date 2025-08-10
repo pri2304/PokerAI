@@ -59,6 +59,13 @@ class Player:
         else:
             return False
 
+    def raise_to(self, target_total):
+        """Check if raise amount is valid then set raise amount using bet()"""
+        if target_total <= self.current_bet:
+            return 0
+        add = target_total - self.current_bet
+        return self.bet(add)
+
     def __str__(self):
         cards_str = ' ,'.join(str(card) for card in self.hole_cards)
         return f"{self.name}: {cards_str} (Chips : {self.chips})"
